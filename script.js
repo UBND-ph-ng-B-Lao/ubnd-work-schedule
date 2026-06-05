@@ -1,2 +1,1 @@
-     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+// Main app logic is currently embedded in index.html.

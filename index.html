@@ -20,7 +20,49 @@
   --shadow: 0 2px 8px rgba(0,0,0,.1);
   --shadow-lg: 0 8px 28px rgba(0,0,0,.15);
 }
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --primary:#0e639c; --primary-d:#0a4e7d; --primary-l:#18344d;
+  --pending-c:#f59e0b; --pending-bg:#3a2a10;
+  --success-c:#4ade80; --danger-c:#f87171;
+  --border:#334155; --surface:#111827; --surface2:#1f2937; --surface3:#0f172a;
+  --text:#e5e7eb; --text2:#b6c2d2; --text3:#8291a8;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.35);
+  --shadow:0 2px 10px rgba(0,0,0,.45);
+  --shadow-lg:0 10px 36px rgba(0,0,0,.55);
+}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;background:var(--surface3);color:var(--text);height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased}
+:root[data-theme="dark"] .login-box,
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .queue-item,
+:root[data-theme="dark"] .sb-btn,
+:root[data-theme="dark"] .sf-btn,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea,
+:root[data-theme="dark"] .login-field input,
+:root[data-theme="dark"] .leader-solo-select,
+:root[data-theme="dark"] .lsb,
+:root[data-theme="dark"] .da-btn,
+:root[data-theme="dark"] .color-row input[type=color]{
+  background:var(--surface);
+  color:var(--text);
+}
+:root[data-theme="dark"] .sb-search input{background:var(--surface2);color:var(--text)}
+:root[data-theme="dark"] .sb-search input:focus,
+:root[data-theme="dark"] .field input:focus,
+:root[data-theme="dark"] .field select:focus,
+:root[data-theme="dark"] .field textarea:focus{background:#172033}
+:root[data-theme="dark"] .weekend-off,
+:root[data-theme="dark"] .weekend-full-rest{background:rgba(17,24,39,.88)}
+:root[data-theme="dark"] .lunch-zone{background:rgba(148,163,184,.12)}
+:root[data-theme="dark"] .evening-zone{background:rgba(148,163,184,.10)}
+:root[data-theme="dark"] .btn-ghost{background:transparent;color:var(--text2)}
+:root[data-theme="dark"] .qr-wrap{background:var(--surface2)}
+:root[data-theme="dark"] .da-btn{border-color:var(--border);color:var(--text2)}
+:root[data-theme="dark"] .da-btn:hover{background:var(--primary);color:white;border-color:var(--primary)}
+:root[data-theme="dark"] .lsb.lsb-apply{background:var(--primary);color:white;border-color:var(--primary)}
+:root[data-theme="dark"] .lsb.lsb-reset:hover{background:var(--surface2);color:var(--text)}
 
 /* ===================== LOGIN SCREEN ===================== */
 #login-screen{position:fixed;inset:0;background:var(--primary);display:flex;align-items:center;justify-content:center;z-index:9999}
@@ -344,6 +386,16 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;ba
 </style>
 <script type="module" src="./firebase-init.js"></script>
 <script type="module" src="./script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<script>
+try {
+  const savedTheme = localStorage.getItem("ubnd_theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = savedTheme || (prefersDark ? "dark" : "light");
+} catch(e) {
+  document.documentElement.dataset.theme = "light";
+}
+</script>
 </head>
 <body>
 <!-- ==================== LOGIN ==================== -->
@@ -394,6 +446,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;ba
         ⏳ Chờ duyệt <span class="badge-pending-count" id="queue-count">0</span>
       </button>
       <button class="hdr-btn add" id="btn-add" onclick="openForm()" style="display:none">+ Thêm lịch</button>
+      <button class="hdr-btn" id="btn-theme" onclick="toggleTheme()" title="Đổi giao diện sáng/tối">🌙 Tối</button>
       <button class="hdr-btn" onclick="doPrint()" title="Xuất PDF">🖨️ In / PDF</button>
       <button class="hdr-btn" onclick="doLogout()">↩ Đăng xuất</button>
     </div>
@@ -743,6 +796,31 @@ let _viewEvtId = null;
 // ─── HELPERS ─────────────────────────────────────────
 const g = id => document.getElementById(id);
 const show = (id,v) => { const el=g(id); if(el) el.style.display=v?"":"none"; };
+const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => ({
+  "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+}[ch]));
+const jsArg = v => esc(JSON.stringify(String(v ?? "")));
+const safeColor = c => /^#[0-9a-f]{6}$/i.test(String(c || "")) ? c : "#6b7280";
+const safeDataUrl = url => /^data:(application\/pdf|image\/[a-z0-9.+-]+);base64,[a-z0-9+/=\s]+$/i.test(String(url || "")) ? url : "";
+function applyTheme(theme){
+  const mode = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = mode;
+  const btn = g("btn-theme");
+  if(btn){
+    btn.textContent = mode === "dark" ? "☀️ Sáng" : "🌙 Tối";
+    btn.title = mode === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
+  }
+}
+function loadTheme(){
+  let theme = document.documentElement.dataset.theme || "light";
+  try { theme = localStorage.getItem("ubnd_theme") || theme; } catch(e) {}
+  applyTheme(theme);
+}
+function toggleTheme(){
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("ubnd_theme", next); } catch(e) {}
+}
 
 // ─── STORAGE ─────────────────────────────────────────
 const lsLoad = () => { try{return JSON.parse(localStorage.getItem(LS_KEY))||{};}catch{return{};} };
@@ -751,7 +829,6 @@ const fb = async (path, opts = {}) => {
   try {
     const base = FIREBASE_URL.replace(/\/$/, '');
     const url = `${base}/${path}.json`;
-    console.log('FB request:', opts.method || 'GET', url, opts);
     const r = await fetch(url, opts);
     const text = await r.text();
     let data = null;
@@ -760,7 +837,6 @@ const fb = async (path, opts = {}) => {
       console.error('Firebase error:', r.status, r.statusText, data);
       return null;
     }
-    console.log('Firebase OK:', r.status, data);
     return data;
   } catch (err) {
     console.error('Firebase fetch failed:', err);
@@ -789,13 +865,15 @@ async function dbSaveLeaders(l) {
 }
 
 // ─── DATE / TIME UTILS ───────────────────────────────
-const toDS  = d => d.toISOString().split("T")[0];
+const pad2  = n => String(n).padStart(2, "0");
+const toDS  = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 const viD   = s => { const[y,m,d]=s.split("-"); return `${d}/${m}/${y}`; };
 const viDS  = s => { const[y,m,d]=s.split("-"); return `${d}/${m}`; };
 const tM    = t => { const[h,m]=t.split(":").map(Number); return h*60+m; };
 const tPx   = t => (tM(t)/60 - DAY_S) * PPH;
 const durPx = (s,e) => (tM(e)-tM(s))/60 * PPH;
 const isToday = ds => ds === toDS(new Date());
+const parseDS = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
 
 function isoWeek(date) {
   const d=new Date(date); d.setHours(0,0,0,0);
@@ -810,7 +888,7 @@ function weekDates(off=0) {
   return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
 }
 const isWeekend = ds => {
-  const d = new Date(ds);
+  const d = parseDS(ds);
   const day = d.getDay();
   return day === 0 || day === 6;
 }
@@ -870,9 +948,9 @@ function renderLeaderFilters() {
   container.innerHTML = Object.values(LEADERS).map(ld => `
     <div class="sb-filter-item">
       <label>
-        <input type="checkbox" id="f-${ld.id}" checked onchange="applyFilters()">
-        <span style="width:11px;height:11px;border-radius:50%;background:${ld.color};flex-shrink:0;display:inline-block;margin-right:2px"></span>
-        ${ld.name}
+        <input type="checkbox" id="f-${esc(ld.id)}" checked onchange="applyFilters()">
+        <span style="width:11px;height:11px;border-radius:50%;background:${safeColor(ld.color)};flex-shrink:0;display:inline-block;margin-right:2px"></span>
+        ${esc(ld.name)}
       </label>
     </div>`).join("");
 }
@@ -882,7 +960,7 @@ function renderFormLeaderDropdown() {
   if(!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">-- Chọn --</option>' +
-    Object.values(LEADERS).map(ld => `<option value="${ld.id}">${ld.name}</option>`).join("");
+    Object.values(LEADERS).map(ld => `<option value="${esc(ld.id)}">${esc(ld.name)}</option>`).join("");
   if(cur) sel.value = cur;
 }
 
@@ -944,7 +1022,7 @@ function applyRoleUI() {
   show("sb-users-btn", can("manageUsers"));
   show("sb-leaders-btn", can("manageUsers"));
   show("sb-leaders-btn2", can("manageUsers"));
-  if(u.role==="viewer") g("sb-status-section").style.display="none";
+  show("sb-status-section", u.role!=="viewer");
   renderLeaderFilters();
   renderFormLeaderDropdown();
   renderLeaderSoloFilter();
@@ -1090,11 +1168,11 @@ function buildEvtEl(e) {
   el.dataset.id=e.id;
   const top=tPx(e.startTime), h=Math.max(durPx(e.startTime,e.endTime),24);
   const lp=(e._col/e._tc)*100, wp=(1/e._tc)*100;
-  el.style.cssText=`top:${top}px;height:${h}px;left:calc(${lp}% + 3px);width:calc(${wp}% - 6px);background:${ld.color};color:white`;
+  el.style.cssText=`top:${top}px;height:${h}px;left:calc(${lp}% + 3px);width:calc(${wp}% - 6px);background:${safeColor(ld.color)};color:white`;
   const dur=tM(e.endTime)-tM(e.startTime);
-  let html=`<div class="ev-time">${e.startTime}–${e.endTime}</div>`;
-  html+=`<div class="ev-title">${e.title}</div>`;
-  if(dur>=90 && e.location) html+=`<div class="ev-loc">📍${e.location}</div>`;
+  let html=`<div class="ev-time">${esc(e.startTime)}–${esc(e.endTime)}</div>`;
+  html+=`<div class="ev-title">${esc(e.title)}</div>`;
+  if(dur>=90 && e.location) html+=`<div class="ev-loc">📍${esc(e.location)}</div>`;
   if(e.status==="pending") html+=`<span class="ev-badge">⏳ Chờ duyệt</span>`;
   if(e.invitationFile) html+=`<span class="ev-badge" title="Có giấy mời đính kèm">📎</span>`;
   el.innerHTML=html;
@@ -1171,23 +1249,23 @@ function openQueue() {
   const pend=Object.values(S.events).filter(e=>e.status==="pending")
     .sort((a,b)=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
   g("queue-body").innerHTML = pend.length ? pend.map(e => {
-    const ld=LEADERS[e.leader];
+    const ld=LEADERS[e.leader]||{short:"?",color:"#6b7280"};
     return `<div class="queue-item">
       <div class="qi-head">
         <div>
-          <div class="qi-title">${e.title}</div>
+          <div class="qi-title">${esc(e.title)}</div>
           <div class="qi-meta">
-            <span class="leader-badge" style="background:${ld.color}">${ld.short}</span>
-            ${viD(e.date)}, ${e.startTime}–${e.endTime}
-            · 📍${e.location||"—"}${e.staff?` · CV: ${e.staff}`:""}
+            <span class="leader-badge" style="background:${safeColor(ld.color)}">${esc(ld.short)}</span>
+            ${esc(viD(e.date))}, ${esc(e.startTime)}–${esc(e.endTime)}
+            · 📍${esc(e.location||"—")}${e.staff?` · CV: ${esc(e.staff)}`:""}
           </div>
         </div>
         <span class="badge badge-pending">⏳ Chờ duyệt</span>
       </div>
       <div class="qi-actions">
-        <button class="btn btn-success btn-sm" onclick="qApprove('${e.id}')">✓ Duyệt</button>
-        <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-queue');openDetail('${e.id}')">Chi tiết</button>
-        <button class="btn btn-danger btn-sm" onclick="qReject('${e.id}')">✕ Từ chối</button>
+        <button class="btn btn-success btn-sm" onclick="qApprove(${jsArg(e.id)})">✓ Duyệt</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-queue');openDetail(${jsArg(e.id)})">Chi tiết</button>
+        <button class="btn btn-danger btn-sm" onclick="qReject(${jsArg(e.id)})">✕ Từ chối</button>
       </div>
     </div>`;
   }).join("") : '<div class="empty-state"><div class="icon">✅</div><p>Không có lịch nào chờ duyệt</p></div>';
@@ -1203,13 +1281,13 @@ function openDetail(id) {
   const e=S.events[id]; if(!e)return;
   _viewEvtId=id;
   const ld=LEADERS[e.leader]||{name:"Không rõ",short:"?",color:"#6b7280"};
-  g("d-bar").style.cssText=`height:6px;border-radius:3px;margin-bottom:16px;background:${ld.color}`;
+  g("d-bar").style.cssText=`height:6px;border-radius:3px;margin-bottom:16px;background:${safeColor(ld.color)}`;
   g("d-title").textContent=e.title;
   const sb={pending:`<span class="badge badge-pending">⏳ Chờ duyệt</span>`,approved:`<span class="badge badge-approved">✓ Đã duyệt</span>`,rejected:`<span class="badge badge-rejected">✕ Từ chối</span>`};
-  const ldBadge=`<span class="leader-badge" style="background:${ld.color}">${ld.name}</span>`;
-  g("d-status-row").innerHTML=sb[e.status]+" "+ldBadge;
+  const ldBadge=`<span class="leader-badge" style="background:${safeColor(ld.color)}">${esc(ld.name)}</span>`;
+  g("d-status-row").innerHTML=(sb[e.status]||"")+" "+ldBadge;
   const rows=[["Ngày",viD(e.date)],["Giờ",`${e.startTime} – ${e.endTime}`],["Địa điểm",e.location||"—"],["CV phụ trách",e.staff||"—"],["Thành phần",e.attendees||"—"],["Ghi chú",e.notes||"—"],["Người tạo",e.createdBy||"—"]];
-  g("d-grid").innerHTML=rows.map(([k,v])=>`<div class="detail-label">${k}</div><div class="detail-val">${v}</div>`).join("");
+  g("d-grid").innerHTML=rows.map(([k,v])=>`<div class="detail-label">${esc(k)}</div><div class="detail-val">${esc(v)}</div>`).join("");
   const rb=g("d-reject-box");
   if(e.status==="rejected"&&e.rejectedReason){rb.textContent="🚫 Lý do từ chối: "+e.rejectedReason;rb.classList.add("show");}else{rb.classList.remove("show");}
   g("d-reject-input").classList.remove("show");
@@ -1218,15 +1296,15 @@ function openDetail(id) {
   const f=g("d-footer");
   let btns=`<button class="btn btn-ghost" onclick="closeModal('modal-detail')">Đóng</button>`;
   if(can("canApprove")&&e.status==="pending"){
-    btns+=`<button class="btn btn-success" onclick="dApprove('${id}')">✓ Duyệt lịch</button>`;
+    btns+=`<button class="btn btn-success" onclick="dApprove(${jsArg(id)})">✓ Duyệt lịch</button>`;
     btns+=`<button class="btn btn-warn" onclick="toggleRejectInput()">✕ Từ chối</button>`;
-    btns+=`<button class="btn btn-danger" id="btn-confirm-reject" onclick="dReject('${id}')" style="display:none">Xác nhận từ chối</button>`;
+    btns+=`<button class="btn btn-danger" id="btn-confirm-reject" onclick="dReject(${jsArg(id)})" style="display:none">Xác nhận từ chối</button>`;
   }
   const mine=e.createdBy===S.user?.username;
   if((can("canAdd")&&mine)||can("canApprove")) {
-    if(e.status!=="rejected") btns+=`<button class="btn btn-ghost" onclick="editEvent('${id}')">✏️ Sửa</button>`;
+    if(e.status!=="rejected") btns+=`<button class="btn btn-ghost" onclick="editEvent(${jsArg(id)})">✏️ Sửa</button>`;
   }
-  if(can("canApprove")) btns+=`<button class="btn btn-danger btn-sm" title="Xóa" onclick="delEvent('${id}')">🗑</button>`;
+  if(can("canApprove")) btns+=`<button class="btn btn-danger btn-sm" title="Xóa" onclick="delEvent(${jsArg(id)})">🗑</button>`;
   f.innerHTML=btns;
   if(e.invitationFile){
     const inv=e.invitationFile;
@@ -1262,12 +1340,12 @@ function renderUserList(){
   const rl={admin:"Quản trị",editor:"Văn phòng",staff:"Chuyên viên",viewer:"Xem lịch"};
   g("users-list").innerHTML=Object.values(S.users).map(u=>`
     <div class="user-row">
-      <div class="user-avatar">${u.name.charAt(0).toUpperCase()}</div>
+      <div class="user-avatar">${esc((u.name||"?").charAt(0).toUpperCase())}</div>
       <div class="user-info">
-        <div class="user-name">${u.name} <span class="role-tag role-${u.role}">${rl[u.role]}</span></div>
-        <div class="user-dept">@${u.username}${u.dept?` · ${u.dept}`:""}</div>
+        <div class="user-name">${esc(u.name)} <span class="role-tag role-${esc(u.role)}">${esc(rl[u.role]||u.role)}</span></div>
+        <div class="user-dept">@${esc(u.username)}${u.dept?` · ${esc(u.dept)}`:""}</div>
       </div>
-      ${u.id!=="u1"?`<button class="btn btn-danger btn-sm" onclick="delUser('${u.id}')">Xóa</button>`:""}
+      ${u.id!=="u1"?`<button class="btn btn-danger btn-sm" onclick="delUser(${jsArg(u.id)})">Xóa</button>`:""}
     </div>`).join("");
 }
 async function addUser(){
@@ -1365,36 +1443,36 @@ function renderLeaderList() {
   if(!ldList.length){ container.innerHTML='<p style="color:var(--text3);font-size:13px">Chưa có lãnh đạo nào.</p>'; return; }
   container.innerHTML = ldList.map(ld => {
     const evtCount = Object.values(S.events).filter(e => e.leader === ld.id).length;
-    return `<div class="leader-row" id="ldr-row-${ld.id}">
-      <div class="leader-swatch" style="background:${ld.color}">${ld.short}</div>
+    return `<div class="leader-row" id="ldr-row-${esc(ld.id)}">
+      <div class="leader-swatch" style="background:${safeColor(ld.color)}">${esc(ld.short)}</div>
       <div class="leader-info">
-        <div class="leader-info-name">${ld.name}</div>
-        <div class="leader-info-sub">${ld.title||"Chưa có chức danh đầy đủ"} · ${evtCount} lịch</div>
+        <div class="leader-info-name">${esc(ld.name)}</div>
+        <div class="leader-info-sub">${esc(ld.title||"Chưa có chức danh đầy đủ")} · ${evtCount} lịch</div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="toggleLeaderEdit('${ld.id}')">✏️ Sửa</button>
-      ${ld.id!=="ct"?`<button class="btn btn-danger btn-sm" onclick="deleteLeader('${ld.id}','${ld.name}')" title="Xóa">🗑</button>`:""}
+      <button class="btn btn-ghost btn-sm" onclick="toggleLeaderEdit(${jsArg(ld.id)})">✏️ Sửa</button>
+      ${ld.id!=="ct"?`<button class="btn btn-danger btn-sm" onclick="deleteLeader(${jsArg(ld.id)},${jsArg(ld.name)})" title="Xóa">🗑</button>`:""}
     </div>
-    <div class="leader-edit-panel" id="ldr-edit-${ld.id}">
+    <div class="leader-edit-panel" id="ldr-edit-${esc(ld.id)}">
       <div class="form-row two">
         <div class="field"><label>Tên hiển thị</label>
-          <input id="le-name-${ld.id}" type="text" value="${ld.name}">
+          <input id="le-name-${esc(ld.id)}" type="text" value="${esc(ld.name)}">
         </div>
         <div class="field"><label>Tên viết tắt</label>
-          <input id="le-short-${ld.id}" type="text" value="${ld.short}" maxlength="6">
+          <input id="le-short-${esc(ld.id)}" type="text" value="${esc(ld.short)}" maxlength="6">
         </div>
       </div>
       <div class="field" style="margin-bottom:10px"><label>Chức danh đầy đủ</label>
-        <input id="le-title-${ld.id}" type="text" value="${ld.title||""}">
+        <input id="le-title-${esc(ld.id)}" type="text" value="${esc(ld.title||"")}">
       </div>
       <div class="field" style="margin-bottom:10px"><label>Màu sắc</label>
         <div class="color-row">
-          <input type="color" id="le-color-${ld.id}" value="${ld.color}">
-          <div class="color-presets">${COLOR_PRESETS.map(c=>`<span class="color-preset" style="background:${c}" onclick="g('le-color-${ld.id}').value='${c}'"></span>`).join("")}</div>
+          <input type="color" id="le-color-${esc(ld.id)}" value="${safeColor(ld.color)}">
+          <div class="color-presets">${COLOR_PRESETS.map(c=>`<span class="color-preset" style="background:${c}" onclick="g(${jsArg(`le-color-${ld.id}`)}).value='${c}'"></span>`).join("")}</div>
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" onclick="saveLeaderEdit('${ld.id}')">💾 Lưu thay đổi</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleLeaderEdit('${ld.id}')">Hủy</button>
+        <button class="btn btn-primary btn-sm" onclick="saveLeaderEdit(${jsArg(ld.id)})">💾 Lưu thay đổi</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleLeaderEdit(${jsArg(ld.id)})">Hủy</button>
       </div>
     </div>`;
   }).join("");
@@ -1513,24 +1591,28 @@ function formatFileSize(bytes) {
 function downloadAttachment() {
   const e = _viewEvtId ? S.events[_viewEvtId] : null;
   if(!e?.invitationFile) return;
+  const href = safeDataUrl(e.invitationFile.data);
+  if(!href){ toast("Tệp đính kèm không hợp lệ","warn"); return; }
   const a = document.createElement("a");
-  a.href = e.invitationFile.data; a.download = e.invitationFile.name;
+  a.href = href; a.download = e.invitationFile.name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 function viewAttachment() {
   const e = _viewEvtId ? S.events[_viewEvtId] : null;
   if(!e?.invitationFile) return;
   const f = e.invitationFile;
+  const dataUrl = safeDataUrl(f.data);
+  if(!dataUrl){ toast("Tệp đính kèm không hợp lệ","warn"); return; }
   const win = window.open("", "_blank");
   if(!win){ toast("Trình duyệt chặn popup, vui lòng cho phép","warn"); return; }
   if(f.type && f.type.startsWith("image/")){
-    win.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>" + f.name + "</title>"
+    win.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>" + esc(f.name) + "</title>"
       + "<style>body{margin:0;background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}"
       + "img{max-width:100vw;max-height:100vh;object-fit:contain}</style></head>"
-      + "<body><img src='" + f.data + "'></body></html>");
+      + "<body><img src='" + dataUrl + "'></body></html>");
   } else {
-    win.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>" + f.name + "</title></head>"
-      + "<body style='margin:0'><iframe src='" + f.data + "' style='width:100vw;height:100vh;border:none'></iframe></body></html>");
+    win.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>" + esc(f.name) + "</title></head>"
+      + "<body style='margin:0'><iframe src='" + dataUrl + "' style='width:100vw;height:100vh;border:none'></iframe></body></html>");
   }
   win.document.close();
 }
@@ -1568,7 +1650,7 @@ function renderLeaderSoloFilter() {
   const cur = S.leaderFilt || "";
   sel.innerHTML = "<option value=''>-- Chọn lãnh đạo --</option>" +
     Object.values(LEADERS).map(ld =>
-      "<option value='" + ld.id + "'" + (cur===ld.id?" selected":"") + ">" + ld.name + "</option>"
+      "<option value='" + esc(ld.id) + "'" + (cur===ld.id?" selected":"") + ">" + esc(ld.name) + "</option>"
     ).join("");
 }
 function applyLeaderSolo() {
@@ -1580,7 +1662,7 @@ function applyLeaderSolo() {
   if(badge){
     badge.style.display = "";
     badge.textContent = ld ? ld.short : "?";
-    badge.style.background = ld ? ld.color : "#6b7280";
+    badge.style.background = ld ? safeColor(ld.color) : "#6b7280";
   }
   renderCal();
   toast("Đang lọc lịch: " + (ld ? ld.name : S.leaderFilt), "success");
@@ -1623,8 +1705,14 @@ document.querySelectorAll(".overlay").forEach(ov => {
 });
 
 // ─── INIT ─────────────────────────────────────────────
+let nowTimer = null;
+function startNowTimer(){
+  if(!nowTimer) nowTimer = setInterval(()=>{updateNowLine();}, 60000);
+}
 async function init() {
+  loadTheme();
   try { await loadAll(); } catch(err) { console.error("Init error:", err); }
+  startNowTimer();
   // Try restore session
   try {
     const sess=sessionStorage.getItem("ubnd_sess");
@@ -1639,8 +1727,6 @@ async function init() {
       }
     }
   } catch{}
-  // Auto-refresh now line every 60s
-  setInterval(()=>{updateNowLine();}, 60000);
 }
 document.addEventListener("DOMContentLoaded", init);
 </script>
