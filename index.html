@@ -995,41 +995,18 @@ function buildDayCol(date, evts) {
     }
   }
   // Lunch zone
-  const lz=document.createElement("div");
-  lz.className="lunch-zone";
-  lz.style.top=tPx("11:30")+"px";
-  lz.style.height=durPx("11:30","13:30")+"px";
-  lz.innerHTML='<span class="lunch-label">☕ Nghỉ trưa</span>';
-  col.appendChild(lz);
-
   const isWknd = isWeekend(ds);
-  if(isWknd) {
-    if(!evts.length) {
-      col.classList.add("weekend-empty");
-      const full = document.createElement("div");
-      full.className="weekend-full-rest";
-      full.textContent="Ngày nghỉ";
-      col.appendChild(full);
-    } else {
-      const hasMorning = evts.some(e => tM(e.startTime) < tM("12:00") && tM(e.endTime) > tM("07:00"));
-      const hasAfternoon = evts.some(e => tM(e.startTime) < tM("17:00") && tM(e.endTime) > tM("12:00"));
-      if(!hasMorning){
-        const off = document.createElement("div");
-        off.className = "weekend-off";
-        off.style.top = tPx("07:00") + "px";
-        off.style.height = durPx("07:00","12:00") + "px";
-        off.textContent = "Sáng nghỉ";
-        col.appendChild(off);
-      }
-      if(!hasAfternoon){
-        const off = document.createElement("div");
-        off.className = "weekend-off";
-        off.style.top = tPx("12:00") + "px";
-        off.style.height = durPx("12:00","17:00") + "px";
-        off.textContent = "Chiều nghỉ";
-        col.appendChild(off);
-      }
-    }
+  const hasMorning = evts.some(e => tM(e.startTime) < tM("12:00") && tM(e.endTime) > tM("07:00"));
+  const hasAfternoon = evts.some(e => tM(e.startTime) < tM("17:00") && tM(e.endTime) > tM("12:00"));
+  const showLunch = !isWknd || (hasMorning && hasAfternoon);
+
+  if (showLunch) {
+    const lz = document.createElement("div");
+    lz.className = "lunch-zone";
+    lz.style.top = tPx("11:30") + "px";
+    lz.style.height = durPx("11:30","13:30") + "px";
+    lz.innerHTML = '<span class="lunch-label">☕ Nghỉ trưa</span>';
+    col.appendChild(lz);
   }
 
   // Events
