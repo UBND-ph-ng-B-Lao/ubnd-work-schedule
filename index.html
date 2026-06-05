@@ -136,6 +136,21 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;ba
   pointer-events:none;
   text-transform:uppercase;
 }
+.evening-off{
+  position:absolute;
+  left:6px; right:6px;
+  border:1px dashed rgba(11,79,138,.35);
+  background:rgba(255,255,255,.92);
+  border-radius:12px;
+  color:var(--text3);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:700;
+  pointer-events:none;
+  text-transform:uppercase;
+}
 
 #cal-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
 #cal-body{display:flex;min-height:calc(var(--pph) * 10)}
@@ -145,7 +160,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;ba
 .day-col{flex:1;position:relative;border-left:1px solid var(--border);height:calc(var(--pph) * 10);overflow:visible}
 .hl{position:absolute;left:0;right:0;border-top:1px solid var(--border);pointer-events:none}
 .hhl{position:absolute;left:0;right:0;border-top:1px dashed #eff2f8;pointer-events:none}
-.lunch-zone{position:absolute;left:0;right:0;background:rgba(240,242,250,.65);border-top:1.5px dashed #c5d2e8;border-bottom:1.5px dashed #c5d2e8;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1}
+.lunch-zone{position:absolute;left:0;right:0;background:rgba(107,114,128,.15);border-top:1.5px dashed #c5d2e8;border-bottom:1.5px dashed #c5d2e8;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1}
 .lunch-label{font-size:10px;color:var(--text3);letter-spacing:.06em;font-weight:600;text-transform:uppercase}
 .now-line{position:absolute;left:0;right:0;border-top:2px solid #ef4444;z-index:5;pointer-events:none}
 .now-line::before{content:'';position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:#ef4444}
@@ -697,8 +712,8 @@ const LS_KEY = "ubnd_lich_v4";
 // ─── CONSTANTS ───────────────────────────────────────
 const PPH = 64;           // pixels per hour
 const DAY_S = 7;          // giờ bắt đầu làm việc (07:00)
-const DAY_E = 17;         // giờ kết thúc (17:00)
-const GRID_H = (DAY_E - DAY_S) * PPH; // 640px
+const DAY_E = 21;         // giờ kết thúc (21:00 - 9 tối)
+const GRID_H = (DAY_E - DAY_S) * PPH; // 896px
 
 let LEADERS = {};  // loaded from storage; see defLeaders()
 
@@ -965,10 +980,22 @@ function buildTimeGutter() {
   const tg=g("time-gutter"); tg.innerHTML="";
   tg.style.height=GRID_H+"px";
   for(let h=DAY_S; h<=DAY_E; h++) {
+    // Giờ chính (7:00, 8:00, ...)
     const el=document.createElement("div");
     el.className="tl"; el.style.top=((h-DAY_S)*PPH)+"px";
     el.textContent=(h<10?"0":"")+h+":00";
     tg.appendChild(el);
+    
+    // Mốc nửa giờ (7:30, 8:30, ...) - mờ và nhỏ hơn
+    if(h<DAY_E){
+      const half=document.createElement("div");
+      half.className="tl"; 
+      half.style.top=((h-DAY_S+0.5)*PPH)+"px";
+      half.style.opacity="0.5";
+      half.style.fontSize="11px";
+      half.textContent=(h<10?"0":"")+h+":30";
+      tg.appendChild(half);
+    }
   }
 }
 function buildDayHeads(dates) {
