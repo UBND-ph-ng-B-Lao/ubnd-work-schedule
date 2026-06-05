@@ -1066,9 +1066,9 @@ function buildDayCol(date, evts) {
       }
     }
   }
- // Evening zone (17:30 - 21:00) - bôi mờ + "Tan làm"
-  const eveningEvts = evts.filter(e => tM(e.startTime) < tM("21:00") && tM(e.endTime) > tM("17:30"));
+ // Evening zone (17:30 - 21:00) - luôn bôi xám
   if(!isWknd) {
+    const eveningEvts = evts.filter(e => tM(e.startTime) < tM("21:00") && tM(e.endTime) > tM("17:30"));
     const ez = document.createElement("div");
     ez.className = "evening-zone";
     ez.style.top = tPx("17:30") + "px";
