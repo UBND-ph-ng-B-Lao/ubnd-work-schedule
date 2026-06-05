@@ -154,7 +154,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;ba
 
 #cal-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
 #cal-body{display:flex;min-height:calc(var(--pph) * 10)}
-.time-gutter{width:var(--tcw);flex-shrink:0;border-right:1px solid var(--border);position:relative;height:calc(var(--pph) * 10)}
+.time-gutter{width:var(--tcw);flex-shrink:0;border-right:1px solid var(--border);position:relative;height:calc(var(--pph) * 10);padding-top:20px;}
+
+.evening-zone{position:absolute;left:0;right:0;background:rgba(200,200,200,.08);border-top:1.5px dashed #c5d2e8;border-bottom:1.5px dashed #c5d2e8;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;opacity:.6}
+.evening-label{font-size:10px;color:var(--text3);letter-spacing:.06em;font-weight:600;text-transform:uppercase}
 .tl{position:absolute;right:8px;font-size:10.5px;color:var(--text3);transform:translateY(-50%);white-space:nowrap;user-select:none}
 .day-cols{display:flex;flex:1;position:relative}
 .day-col{flex:1;position:relative;border-left:1px solid var(--border);height:calc(var(--pph) * 10);overflow:visible}
@@ -1063,7 +1066,19 @@ function buildDayCol(date, evts) {
       }
     }
   }
-
+ // Evening zone (17:30 - 21:00) - bôi mờ + "Tan làm"
+  const eveningEvts = evts.filter(e => tM(e.startTime) < tM("21:00") && tM(e.endTime) > tM("17:30"));
+  if(!isWknd) {
+    const ez = document.createElement("div");
+    ez.className = "evening-zone";
+    ez.style.top = tPx("17:30") + "px";
+    ez.style.height = durPx("17:30", "21:00") + "px";
+    if(!eveningEvts.length){
+      ez.innerHTML = '<span class="evening-label">Tan làm</span>';
+    }
+    col.appendChild(ez);
+  }
+  
   // Events
   if(evts.length) assignCols(evts).forEach(e => col.appendChild(buildEvtEl(e)));
   return col;
